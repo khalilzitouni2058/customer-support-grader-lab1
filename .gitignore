@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Local Streamlit secrets contain Supabase credentials and PIN hashes.
+.streamlit/secrets.toml
+.streamlit/secrets.toml.example
+data/annotations.db
+.env
+.DS_Store
+.EROR.TXT
