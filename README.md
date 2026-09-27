@@ -44,14 +44,14 @@ Maximum score: 10.
 
 For exactly 150 items:
 
-| Items | Annotators |
-|---|---|
-| 1–25 | A + B |
-| 26–50 | A + C |
-| 51–75 | A + D |
-| 76–100 | B + C |
-| 101–125 | B + D |
-| 126–150 | C + D |
+| Items   | Annotators |
+| ------- | ---------- |
+| 1–25    | A + B      |
+| 26–50   | A + C      |
+| 51–75   | A + D      |
+| 76–100  | B + C      |
+| 101–125 | B + D      |
+| 126–150 | C + D      |
 
 Each annotator receives exactly 75 items.
 
@@ -128,7 +128,7 @@ For teammates to annotate from different computers, use the Supabase backend.
 
 1. Create a free Supabase project.
 2. Open the SQL editor.
-3. Run the SQL in `docs/supabase.sql`.
+3. Run all SQL in `docs/supabase.sql`, including the grants and RLS policies.
 4. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`.
 5. Add your Supabase URL, Supabase key, and `[PIN_HASHES]`.
 6. Deploy the repository to Streamlit Community Cloud or another host.
@@ -139,6 +139,10 @@ For teammates to annotate from different computers, use the Supabase backend.
 `https://your-project-ref.supabase.co`, without `/rest/v1`. The app will show a
 configuration error instead of silently using local SQLite if only one setting
 is present or the Supabase client cannot be initialized.
+
+The app uses its own PIN login rather than Supabase Auth, so the SQL policies
+allow the `anon` role to read and upsert annotation rows. Do not use a
+service-role key in Streamlit secrets.
 
 Do **not** commit `.streamlit/secrets.toml`.
 

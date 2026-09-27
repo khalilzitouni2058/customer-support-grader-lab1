@@ -12,5 +12,26 @@ create table if not exists public.annotations (
     primary key (item_id, annotator_id)
 );
 
--- For a class project, the simplest setup is to use the anon key.
--- Review your Row Level Security configuration before sharing publicly.
+-- The app performs its own PIN login, so Supabase sees every request as anon.
+alter table public.annotations enable row level security;
+
+grant select, insert, update on table public.annotations to anon, authenticated;
+
+drop policy if exists "Allow annotation reads" on public.annotations;
+create policy "Allow annotation reads"
+on public.annotations for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Allow annotation inserts" on public.annotations;
+create policy "Allow annotation inserts"
+on public.annotations for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Allow annotation updates" on public.annotations;
+create policy "Allow annotation updates"
+on public.annotations for update
+to anon, authenticated
+using (true)
+with check (true);
