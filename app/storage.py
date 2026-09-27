@@ -6,17 +6,24 @@ DB_PATH = Path(__file__).resolve().parents[1] / "data" / "annotations.db"
 
 
 def _get_supabase_client():
-    try:
-        import streamlit as st
-        from supabase import create_client
+    import streamlit as st
+    from supabase import create_client
 
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
-        if url and key:
-            return create_client(url, key)
-    except Exception:
-        pass
-    return None
+    url = str(st.secrets.get("SUPABASE_URL", "")).strip().rstrip("/")
+    key = str(st.secrets.get("SUPABASE_KEY", "")).strip()
+
+    if not url and not key:
+        return None
+    if not url or not key:
+        raise RuntimeError(
+            "Supabase is partially configured. Set both SUPABASE_URL and "
+            "SUPABASE_KEY, or leave both blank for local SQLite mode."
+        )
+
+    if url.endswith("/rest/v1"):
+        url = url[:-len("/rest/v1")]
+
+    return create_client(url, key)
 
 
 def _ensure_sqlite():

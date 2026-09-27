@@ -135,6 +135,11 @@ For teammates to annotate from different computers, use the Supabase backend.
 7. Add the same secrets in the deployment settings.
 8. Share the deployed URL with your teammates.
 
+`SUPABASE_URL` must be the project URL, such as
+`https://your-project-ref.supabase.co`, without `/rest/v1`. The app will show a
+configuration error instead of silently using local SQLite if only one setting
+is present or the Supabase client cannot be initialized.
+
 Do **not** commit `.streamlit/secrets.toml`.
 
 ## Replace member names
