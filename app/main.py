@@ -283,6 +283,15 @@ elif view == "Export":
         st.info("No annotations have been saved yet.")
     else:
         st.dataframe(annotations, hide_index=True)
+        member_annotations = annotations[
+            annotations["annotator_id"] == annotator_id
+        ]
+        st.download_button(
+            "Download my annotations.csv",
+            data=member_annotations.to_csv(index=False).encode("utf-8"),
+            file_name=f"annotations_{annotator_id}.csv",
+            mime="text/csv",
+        )
         st.download_button(
             "Download annotations.csv",
             data=annotations.to_csv(index=False).encode("utf-8"),

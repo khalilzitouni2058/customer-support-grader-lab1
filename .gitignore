@@ -5,6 +5,7 @@ __pycache__/
 # Local Streamlit secrets contain Supabase credentials and PIN hashes.
 .streamlit/secrets.toml
 data/annotations.db
+data/annotations.json
 .env
 .DS_Store
 .EROR.TXT

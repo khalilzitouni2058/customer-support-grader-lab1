@@ -8,8 +8,7 @@ This repository is the starting point for an evaluation harness for customer-sup
 
 - A Streamlit annotation UI
 - Balanced 4-person assignment: 75 items per annotator, 2 annotators per item
-- Local SQLite storage for development
-- Optional Supabase storage for shared online annotation
+- File-based annotation storage
 - Progress dashboard
 - CSV export of collected annotations
 - JSONL schema for scenarios
@@ -85,9 +84,9 @@ Run:
 streamlit run app/main.py
 ```
 
-The app requires PIN hashes in `.streamlit/secrets.toml`. If Supabase settings
-are blank, annotations are saved to the local SQLite database at
-`data/annotations.db`.
+The app requires PIN hashes in `.streamlit/secrets.toml`. Answers are saved to
+`data/annotations.json`, allowing each annotator to log back in and continue
+from their previous progress.
 
 ## PIN login
 
@@ -110,9 +109,6 @@ Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and replace
 the placeholder hashes:
 
 ```toml
-SUPABASE_URL = ""
-SUPABASE_KEY = ""
-
 [PIN_HASHES]
 A = "SHA256_HASH_FOR_MEMBER_A_PIN"
 B = "SHA256_HASH_FOR_MEMBER_B_PIN"
@@ -122,27 +118,16 @@ D = "SHA256_HASH_FOR_MEMBER_D_PIN"
 
 Do not commit `.streamlit/secrets.toml`.
 
-## Shared online annotation
+## Collect and merge answers
 
-For teammates to annotate from different computers, use the Supabase backend.
+Use the deployed app for annotation. Each login reads the saved JSON file and
+continues at the first unfinished assigned item. When finished, open **Export**
+and download `annotations_A.csv`, `annotations_B.csv`, `annotations_C.csv`, or
+`annotations_D.csv`. Merge those four files later using `item_id` and
+`annotator_id` as the unique key.
 
-1. Create a free Supabase project.
-2. Open the SQL editor.
-3. Run all SQL in `docs/supabase.sql`, including the grants and RLS policies.
-4. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`.
-5. Add your Supabase URL, Supabase key, and `[PIN_HASHES]`.
-6. Deploy the repository to Streamlit Community Cloud or another host.
-7. Add the same secrets in the deployment settings.
-8. Share the deployed URL with your teammates.
-
-`SUPABASE_URL` must be the project URL, such as
-`https://your-project-ref.supabase.co`, without `/rest/v1`. The app will show a
-configuration error instead of silently using local SQLite if only one setting
-is present or the Supabase client cannot be initialized.
-
-The app uses its own PIN login rather than Supabase Auth, so the SQL policies
-allow the `anon` role to read and upsert annotation rows. Do not use a
-service-role key in Streamlit secrets.
+On Streamlit Cloud, the local file can be lost when the app restarts. Every
+annotator should download their CSV before the app is stopped or redeployed.
 
 Do **not** commit `.streamlit/secrets.toml`.
 

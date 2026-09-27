@@ -1,109 +1,46 @@
 from pathlib import Path
-import sqlite3
+import json
 import pandas as pd
 
-DB_PATH = Path(__file__).resolve().parents[1] / "data" / "annotations.db"
+ANNOTATIONS_PATH = Path(__file__).resolve().parents[1] / "data" / "annotations.json"
 
 
-def _get_supabase_client():
-    import streamlit as st
-    from supabase import create_client
-
-    url = str(st.secrets.get("SUPABASE_URL", "")).strip().rstrip("/")
-    key = str(st.secrets.get("SUPABASE_KEY", "")).strip()
-
-    if not url and not key:
-        return None
-    if not url or not key:
-        raise RuntimeError(
-            "Supabase is partially configured. Set both SUPABASE_URL and "
-            "SUPABASE_KEY, or leave both blank for local SQLite mode."
-        )
-
-    if url.endswith("/rest/v1"):
-        url = url[:-len("/rest/v1")]
-
-    return create_client(url, key)
+def _read_records() -> list[dict]:
+    ANNOTATIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not ANNOTATIONS_PATH.exists():
+        return []
+    with ANNOTATIONS_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
 
 
-def _ensure_sqlite():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS annotations (
-                item_id INTEGER NOT NULL,
-                annotator_id TEXT NOT NULL,
-                correctness INTEGER NOT NULL,
-                completeness INTEGER NOT NULL,
-                policy_compliance INTEGER NOT NULL,
-                politeness INTEGER NOT NULL,
-                clarity INTEGER NOT NULL,
-                total_score INTEGER NOT NULL,
-                reason TEXT,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (item_id, annotator_id)
-            )
-            """
-        )
+def _write_records(records: list[dict]) -> None:
+    temporary_path = ANNOTATIONS_PATH.with_suffix(".tmp")
+    with temporary_path.open("w", encoding="utf-8") as file:
+        json.dump(records, file, indent=2)
+        file.write("\n")
+    temporary_path.replace(ANNOTATIONS_PATH)
 
 
 def save_annotation(record: dict):
-    client = _get_supabase_client()
-    if client:
-        client.table("annotations").upsert(
-            record,
-            on_conflict="item_id,annotator_id"
-        ).execute()
-        return
-
-    _ensure_sqlite()
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            INSERT INTO annotations (
-                item_id, annotator_id, correctness, completeness,
-                policy_compliance, politeness, clarity, total_score, reason,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(item_id, annotator_id)
-            DO UPDATE SET
-                correctness=excluded.correctness,
-                completeness=excluded.completeness,
-                policy_compliance=excluded.policy_compliance,
-                politeness=excluded.politeness,
-                clarity=excluded.clarity,
-                total_score=excluded.total_score,
-                reason=excluded.reason,
-                updated_at=CURRENT_TIMESTAMP
-            """,
-            (
-                record["item_id"],
-                record["annotator_id"],
-                record["correctness"],
-                record["completeness"],
-                record["policy_compliance"],
-                record["politeness"],
-                record["clarity"],
-                record["total_score"],
-                record.get("reason", ""),
-            )
-        )
+    records = _read_records()
+    key = (int(record["item_id"]), record["annotator_id"])
+    updated = {
+        **record,
+        "item_id": key[0],
+        "updated_at": pd.Timestamp.utcnow().isoformat(),
+    }
+    records = [
+        existing
+        for existing in records
+        if (int(existing["item_id"]), existing["annotator_id"]) != key
+    ]
+    records.append(updated)
+    records.sort(key=lambda item: (int(item["item_id"]), item["annotator_id"]))
+    _write_records(records)
 
 
 def load_annotations() -> pd.DataFrame:
-    client = _get_supabase_client()
-    if client:
-        data = client.table("annotations").select("*").execute().data
-        return pd.DataFrame(data)
-
-    _ensure_sqlite()
-    with sqlite3.connect(DB_PATH) as conn:
-        return pd.read_sql_query(
-            "SELECT * FROM annotations ORDER BY item_id, annotator_id",
-            conn
-        )
+    return pd.DataFrame(_read_records())
 
 
 def get_annotation(item_id: int, annotator_id: str):
